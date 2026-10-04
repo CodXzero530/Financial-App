@@ -1,0 +1,6 @@
+{
+  "appId": "com.financialjournal.app",
+  "appName": "Financial Journal",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Financial Journal</title>
+
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <!-- 100% Self-Contained Offline Stylesheet -->
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Security PIN Lock Screen -->
+  <div id="pin-lock-screen" class="pin-lock-screen hidden">
+    <div class="brand-icon" style="width: 56px; height: 56px; font-size: 28px; margin-bottom: 12px;">🔒</div>
+    <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 4px;">Enter Security PIN</h2>
+    <p style="font-size: 13px; color: var(--text-muted);">Protecting your personal financial records</p>
+    <div class="pin-dots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+    <div id="pin-keypad" class="pin-keypad">
+      <button class="pin-key" data-val="1">1</button>
+      <button class="pin-key" data-val="2">2</button>
+      <button class="pin-key" data-val="3">3</button>
+      <button class="pin-key" data-val="4">4</button>
+      <button class="pin-key" data-val="5">5</button>
+      <button class="pin-key" data-val="6">6</button>
+      <button class="pin-key" data-val="7">7</button>
+      <button class="pin-key" data-val="8">8</button>
+      <button class="pin-key" data-val="9">9</button>
+      <button class="pin-key" data-val="clear" style="font-size: 14px; font-weight: 700;">C</button>
+      <button class="pin-key" data-val="0">0</button>
+      <button class="pin-key" data-val="back" style="font-size: 18px;">⌫</button>
+    </div>
+  </div>
+
+  <div class="app-viewport">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon">💰</div>
+        <div>
+          <h1 class="brand-title">Financial Journal</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="dark-mode-toggle" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
+          <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN VIEWS CONTAINER -->
+    <main>
+      <!-- TAB 1: DASHBOARD -->
+      <section id="panel-dashboard" class="tab-panel active">
+        <!-- Hero Balance Card -->
+        <div class="card balance-hero-card">
+          <div class="balance-label">Total Balance</div>
+          <div id="dash-net-balance" class="balance-amount">0.00 FCFA</div>
+          <div class="balance-breakdown">
+            <div class="breakdown-item">
+              <div class="breakdown-pill income">↓</div>
+              <div>
+                <div class="label">Total Income</div>
+                <div id="dash-total-income" class="value">+0.00 FCFA</div>
+              </div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-pill expense">↑</div>
+              <div>
+                <div class="label">Total Expense</div>
+                <div id="dash-total-expense" class="value">-0.00 FCFA</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Transactions Section -->
+        <div class="section-header">
+          <h2 class="section-title">Recent Transactions</h2>
+          <a id="dash-see-all" href="#" class="section-link">See All →</a>
+        </div>
+        <div id="dash-recent-list" class="transaction-list"></div>
+        <div id="dash-recent-empty" class="empty-state" style="display: none;">
+          <div class="empty-state-icon">📋</div>
+          <div class="empty-state-title">No transactions yet</div>
+          <div class="empty-state-desc">Tap the <strong>+</strong> button below to record your first income or expense.</div>
+        </div>
+      </section>
+
+      <!-- TAB 2: TRANSACTIONS (HISTORY & FILTERS) -->
+      <section id="panel-transactions" class="tab-panel">
+        <div class="section-header">
+          <h2 class="section-title">All Transactions</h2>
+        </div>
+
+        <div class="filter-bar">
+          <!-- Search Box -->
+          <div class="search-input-wrapper">
+            <svg fill="none" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input type="text" id="tx-search-input" class="search-input" placeholder="Search by note or category..." />
+          </div>
+
+          <!-- Type Filter Pills -->
+          <div class="pill-group">
+            <button class="pill-btn filter-pill active" data-filter="All">All</button>
+            <button class="pill-btn filter-pill" data-filter="Expense">Expenses</button>
+            <button class="pill-btn filter-pill" data-filter="Income">Income</button>
+          </div>
+
+          <!-- Dropdown Filters Row -->
+          <div class="form-row">
+            <select id="category-filter-select" class="form-select" style="padding: 8px 12px; font-size: 13px;">
+              <option value="All">All Categories</option>
+            </select>
+            <select id="date-preset-select" class="form-select" style="padding: 8px 12px; font-size: 13px;">
+              <option value="all">All Time</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="this_year">This Year</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Full Transactions List -->
+        <div id="tx-full-list" class="transaction-list"></div>
+        <div id="tx-empty-state" class="empty-state" style="display: none;">
+          <div class="empty-state-icon">🔍</div>
+          <div class="empty-state-title">No transactions found</div>
+          <div class="empty-state-desc">Try clearing your search query or changing filters.</div>
+        </div>
+      </section>
+
+      <!-- TAB 3: ANALYTICS -->
+      <section id="panel-analytics" class="tab-panel">
+        <div class="section-header">
+          <h2 class="section-title">Financial Analytics</h2>
+        </div>
+
+        <!-- Monthly Flow Bar Comparison -->
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Cash Flow Comparison</div>
+          <div class="bar-chart-row">
+            <div class="bar-labels">
+              <span style="color: var(--income-green);">Income</span>
+              <span id="bar-income-val" style="font-weight: 700;">0 FCFA</span>
+            </div>
+            <div class="bar-track">
+              <div id="bar-income-fill" class="bar-fill income" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div class="bar-chart-row">
+            <div class="bar-labels">
+              <span style="color: var(--expense-red);">Expense</span>
+              <span id="bar-expense-val" style="font-weight: 700;">0 FCFA</span>
+            </div>
+            <div class="bar-track">
+              <div id="bar-expense-fill" class="bar-fill expense" style="width: 0%;"></div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-light);">
+            <span style="font-size: 13px; color: var(--text-muted);">Savings Rate:</span>
+            <span id="savings-rate-val" style="font-size: 16px; font-weight: 800;">0%</span>
+          </div>
+        </div>
+
+        <!-- Expense by Category Donut Chart -->
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">Expense Breakdown</div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Spending distribution across your categories</p>
+          <div class="chart-container">
+            <svg id="analytics-donut-svg" class="donut-svg" viewBox="0 0 200 200"></svg>
+            <div class="chart-center-info">
+              <div class="chart-center-label">Total Spent</div>
+              <div id="analytics-center-val" class="chart-center-val">0 FCFA</div>
+            </div>
+          </div>
+          <div id="analytics-legend" class="category-legend"></div>
+        </div>
+      </section>
+
+      <!-- TAB 4: BUDGETS -->
+      <section id="panel-budgets" class="tab-panel">
+        <div class="section-header">
+          <h2 class="section-title">Monthly Budgets</h2>
+          <button id="add-budget-btn" class="pill-btn active">+ Set Limit</button>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+          Set monthly spending limits for each category to keep your finances under control.
+        </p>
+
+        <div id="budgets-list"></div>
+        <div id="budgets-empty-state" class="empty-state" style="display: none;">
+          <div class="empty-state-icon">🎯</div>
+          <div class="empty-state-title">No budget limits set</div>
+          <div class="empty-state-desc">Tap <strong>+ Set Limit</strong> above to create your first monthly budget goal.</div>
+        </div>
+      </section>
+
+      <!-- TAB 5: SETTINGS & BACKUP -->
+      <section id="panel-settings" class="tab-panel">
+        <div class="section-header">
+          <h2 class="section-title">App Settings</h2>
+        </div>
+
+        <!-- Currency Preference -->
+        <div class="settings-section">
+          <div class="settings-heading">Preferences</div>
+          <div class="settings-list">
+            <div class="settings-row">
+              <div class="settings-info">
+                <div class="settings-title">Primary Currency</div>
+                <div class="settings-subtitle">Select default currency symbol</div>
+              </div>
+              <select id="settings-currency-select" class="form-select" style="width: auto; padding: 6px 12px; font-size: 13px;">
+                <option value="XAF">FCFA (Central Africa)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="NGN">NGN (₦)</option>
+                <option value="GHS">GHS (₵)</option>
+                <option value="KES">KES (KSh)</option>
+                <option value="CAD">CAD (CA$)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="settings-section">
+          <div class="settings-heading">Security & Privacy</div>
+          <div class="settings-list">
+            <div class="settings-row">
+              <div class="settings-info">
+                <div class="settings-title">App Security PIN</div>
+                <div class="settings-subtitle">Require 4-digit PIN to access journal</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settings-pin-toggle" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Categories -->
+        <div class="settings-section">
+          <div class="settings-heading">Categories</div>
+          <div class="settings-list">
+            <div class="settings-row" style="cursor: pointer;" id="add-custom-cat-btn">
+              <div class="settings-info">
+                <div class="settings-title">+ Add Custom Category</div>
+                <div class="settings-subtitle">Create tailored expense or income tags</div>
+              </div>
+              <span style="font-size: 18px; color: var(--primary);">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Backup & Restore -->
+        <div class="settings-section">
+          <div class="settings-heading">Data Backup & Migration (100% Offline)</div>
+          <div class="settings-list">
+            <div class="settings-row" style="cursor: pointer;" id="export-json-btn">
+              <div class="settings-info">
+                <div class="settings-title">Export Backup (JSON)</div>
+                <div class="settings-subtitle">Save a complete backup of all transactions & settings</div>
+              </div>
+              <span style="font-size: 18px; color: var(--primary);">📥</span>
+            </div>
+            <div class="settings-row" style="cursor: pointer;" id="import-json-btn">
+              <div class="settings-info">
+                <div class="settings-title">Restore Backup (JSON)</div>
+                <div class="settings-subtitle">Restore transactions from a previously exported backup file</div>
+              </div>
+              <span style="font-size: 18px; color: var(--primary);">📤</span>
+            </div>
+            <input type="file" id="json-file-input" accept=".json" style="display: none;" />
+
+            <div class="settings-row" style="cursor: pointer;" id="export-csv-btn">
+              <div class="settings-info">
+                <div class="settings-title">Export to Excel / CSV</div>
+                <div class="settings-subtitle">Download spreadsheet-compatible CSV file</div>
+              </div>
+              <span style="font-size: 18px; color: var(--income-green);">📊</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storage & Reset -->
+        <div class="settings-section">
+          <div class="settings-heading">Storage & Reset</div>
+          <div class="settings-list">
+            <div class="settings-row" style="cursor: pointer;" id="clear-all-data-btn">
+              <div class="settings-info">
+                <div class="settings-title" style="color: var(--expense-red);">Clear All Data</div>
+                <div class="settings-subtitle">Permanently erase all journal entries</div>
+              </div>
+              <span style="font-size: 18px; color: var(--expense-red);">🗑</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- App Info -->
+        <div style="text-align: center; padding: 16px 0; font-size: 12px; color: var(--text-dim);">
+          Financial Journal v2.0 • Offline-First Native PWA & APK<br>
+          Durable IndexedDB Storage Engine
+        </div>
+      </section>
+    </main>
+
+    <!-- Floating Action Button (+) -->
+    <button id="fab-add-btn" class="fab-btn" title="Add Transaction" aria-label="Add Transaction">
+      +
+    </button>
+  </div>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="dashboard">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" data-tab="transactions">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+      <span>History</span>
+    </button>
+    <button class="nav-item" data-tab="analytics">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+      </svg>
+      <span>Analytics</span>
+    </button>
+    <button class="nav-item" data-tab="budgets">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+      <span>Budgets</span>
+    </button>
+    <button class="nav-item" data-tab="settings">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- MODAL: ADD / EDIT TRANSACTION -->
+  <div id="tx-modal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="tx-modal-title" class="modal-title">New Transaction</h3>
+        <button id="close-tx-modal" class="close-btn">✕</button>
+      </div>
+
+      <form id="tx-form">
+        <!-- Type Selection Toggle -->
+        <div class="type-toggle-group">
+          <button type="button" id="type-expense" class="type-toggle-btn active expense">Expense</button>
+          <button type="button" id="type-income" class="type-toggle-btn">Income</button>
+        </div>
+
+        <!-- Amount -->
+        <div class="form-group">
+          <label class="form-label" for="tx-amount">Amount</label>
+          <input type="number" id="tx-amount" class="form-input" step="0.01" required placeholder="0.00" />
+        </div>
+
+        <!-- Category & Date Row -->
+        <div class="form-row form-group">
+          <div>
+            <label class="form-label" for="tx-category">Category</label>
+            <select id="tx-category" class="form-select" required></select>
+          </div>
+          <div>
+            <label class="form-label" for="tx-date">Date</label>
+            <input type="date" id="tx-date" class="form-input" required />
+          </div>
+        </div>
+
+        <!-- Description Note -->
+        <div class="form-group">
+          <label class="form-label" for="tx-description">Note (Optional)</label>
+          <input type="text" id="tx-description" class="form-input" placeholder="e.g. Weekly supermarket run" />
+        </div>
+
+        <button type="submit" id="tx-submit-btn" class="btn-primary">Save Transaction</button>
+        <button type="button" id="tx-delete-btn" class="btn-danger" style="display: none;">Delete Transaction</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: BUDGET LIMIT -->
+  <div id="budget-modal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Set Monthly Budget</h3>
+        <button id="close-budget-modal" class="close-btn">✕</button>
+      </div>
+
+      <form id="budget-form">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select id="budget-category-select" class="form-select" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monthly Spending Limit</label>
+          <input type="number" id="budget-limit-input" class="form-input" step="1" required placeholder="50000" />
+        </div>
+        <button type="submit" class="btn-primary">Save Budget</button>
+        <button type="button" id="budget-delete-btn" class="btn-danger" style="display: none;">Remove Budget</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CUSTOM CATEGORY -->
+  <div id="category-modal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">New Custom Category</h3>
+        <button id="close-cat-modal" class="close-btn">✕</button>
+      </div>
+
+      <form id="category-form">
+        <div class="form-group">
+          <label class="form-label">Category Name</label>
+          <input type="text" id="cat-name-input" class="form-input" placeholder="e.g. Pet Care, Tuition" required />
+        </div>
+        <div class="form-row form-group">
+          <div>
+            <label class="form-label">Type</label>
+            <select id="cat-type-select" class="form-select">
+              <option value="Expense">Expense</option>
+              <option value="Income">Income</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Icon Emoji</label>
+            <input type="text" id="cat-icon-input" class="form-input" placeholder="🐶" maxlength="2" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Color Theme</label>
+          <input type="color" id="cat-color-input" class="form-input" value="#6366f1" style="height: 44px; padding: 2px;" />
+        </div>
+        <button type="submit" class="btn-primary">Create Category</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SET SECURITY PIN -->
+  <div id="set-pin-modal" class="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Configure Security PIN</h3>
+        <button id="close-pin-modal" class="close-btn">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Enter 4-Digit Passcode</label>
+        <input type="password" id="new-pin-input" class="form-input" maxlength="4" placeholder="••••" pattern="[0-9]{4}" inputmode="numeric" />
+      </div>
+      <button type="button" id="save-pin-btn" class="btn-primary">Enable PIN Lock</button>
+    </div>
+  </div>
+
+  <!-- SCRIPTS (IndexedDB Engine & App Router) -->
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
