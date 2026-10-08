@@ -891,10 +891,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const clearDataBtn = document.getElementById("clear-all-data-btn");
   if (clearDataBtn) {
     clearDataBtn.addEventListener("click", async () => {
-      if (confirm("Are you sure you want to permanently clear ALL transaction data? This cannot be undone.")) {
-        await window.journalDB.clearAllTransactions();
+      if (confirm("Are you sure you want to permanently clear ALL journal data? This cannot be undone.")) {
+        await window.journalDB.resetAllData();
         transactions = [];
         budgets = [];
+        categories = await window.journalDB.getAllCategories();
+        currency = await window.journalDB.getSetting("currency", { code: "XAF", symbol: "FCFA", position: "suffix" });
+        pinCode = null;
+        isPinEnabled = false;
+        enteredPin = "";
+        hidePinScreen();
         renderAllViews();
         showToast("All data cleared.");
       }

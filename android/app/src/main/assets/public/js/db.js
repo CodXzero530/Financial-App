@@ -144,6 +144,25 @@ class JournalDB {
     localStorage.setItem(LEGACY_KEY, JSON.stringify(entries));
   }
 
+  _clearFallbackState() {
+    const fallbackKeys = [
+      LEGACY_KEY,
+      "fj_budgets",
+      "fj_categories",
+      "theme"
+    ];
+
+    fallbackKeys.forEach(key => {
+      try { localStorage.removeItem(key); } catch (error) { console.warn(`[Storage] Failed to clear fallback key: ${key}`, error); }
+    });
+
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith("fj_s_")) {
+        try { localStorage.removeItem(key); } catch (error) { console.warn(`[Storage] Failed to clear setting key: ${key}`, error); }
+      }
+    });
+  }
+
   // --- Transactions ---
   async getAllTransactions() {
     await this.init();
@@ -205,15 +224,29 @@ class JournalDB {
   async clearAllTransactions() {
     await this.init();
     if (this.db) {
-      await this._idbClear("transactions");
-      try {
-        localStorage.removeItem(LEGACY_KEY);
-      } catch (error) {
-        console.warn("[Storage] Redundant transaction backup removal failed:", error);
-      }
-    } else {
-      localStorage.removeItem(LEGACY_KEY);
+      await Promise.all([
+        this._idbClear("transactions"),
+        this._idbClear("budgets"),
+        this._idbClear("categories"),
+        this._idbClear("settings")
+      ]);
     }
+
+    try {
+      this._clearFallbackState();
+    } catch (error) {
+      console.warn("[Storage] Full reset failed:", error);
+    }
+
+    return true;
+  }
+
+  async resetAllData() {
+    return this.clearAllTransactions();
+  }
+
+  async resetOnboarding() {
+    return this.clearAllTransactions();
   }
 
   // --- Budgets ---
@@ -221,7 +254,7 @@ class JournalDB {
     await this.init();
     if (this.db) return this._idbAll("budgets");
     try { return JSON.parse(localStorage.getItem("fj_budgets") || "[]"); }
-    catch { return []; }
+    catch (error) { return []; }
   }
 
   async saveBudget(category, limit) {
@@ -279,6 +312,15 @@ class JournalDB {
   async deleteCategory(id) {
     await this.init();
     if (this.db) await this._idbDel("categories", id);
+    else {
+      try {
+        const all = JSON.parse(localStorage.getItem("fj_categories") || "[]");
+        const filtered = Array.isArray(all) ? all.filter(c => c.id !== id) : [];
+        localStorage.setItem("fj_categories", JSON.stringify(filtered));
+      } catch (error) {
+        console.warn("[Storage] Fallback custom category deletion failed:", error);
+      }
+    }
   }
 
   // --- Settings ---
@@ -289,7 +331,7 @@ class JournalDB {
       if (r && r.value !== undefined) return r.value;
     }
     const v = localStorage.getItem("fj_s_" + key);
-    if (v !== null) { try { return JSON.parse(v); } catch { return v; } }
+    if (v !== null) { try { return JSON.parse(v); } catch (error) { return v; } }
     return def;
   }
 
@@ -320,12 +362,12 @@ class JournalDB {
 
   async importBackupJSON(jsonStr, overwrite) {
     let parsed;
-    try { parsed = JSON.parse(jsonStr); } catch { throw new Error("Invalid JSON file."); }
+    try { parsed = JSON.parse(jsonStr); } catch (error) { throw new Error("Invalid JSON file."); }
 
     const entries = Array.isArray(parsed) ? parsed
       : (parsed.data && Array.isArray(parsed.data.transactions) ? parsed.data.transactions : []);
 
-    if (overwrite) await this.clearAllTransactions();
+    if (overwrite) await this.resetAllData();
 
     let count = 0;
     for (const item of entries) {
